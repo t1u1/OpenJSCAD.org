@@ -26,17 +26,25 @@ const retessellate = (geometry) => {
     return geometry
   }
 
-  const polygons = geom3.toPolygons(geometry)
+  const polygons = geom3.toPolygons(geometry).sort((a, b) => a.plane[3] - b.plane[3])
   const polygonsPerPlane = [] // elements: [plane, [poly3...]]
-  polygons.forEach((polygon) => {
-    const mapping = polygonsPerPlane.find((element) => coplanar(element[0], poly3.plane(polygon)))
-    if (mapping) {
-      const polygons = mapping[1]
-      polygons.push(polygon)
+  let currentPlane = null
+  let currentPolygons = []
+  for (let i = 0; i < polygons.length; i++) {
+    const polygon = polygons[i]
+    if (currentPlane === null || Math.abs(currentPlane[3] - polygon.plane[3]) < 0.00000015) {
+      currentPolygons.push(polygon)
     } else {
-      polygonsPerPlane.push([poly3.plane(polygon), [polygon]])
+      if (currentPolygons.length > 1) {
+        polygonsPerPlane.push([currentPlane, currentPolygons])  
+      }
+      currentPolygons = [polygon]
+      currentPlane = polygon.plane
     }
-  })
+  }
+  if (currentPolygons.length > 1) {
+    polygonsPerPlane.push([currentPlane, currentPolygons])  
+  }
 
   let destpolygons = []
   polygonsPerPlane.forEach((mapping) => {
